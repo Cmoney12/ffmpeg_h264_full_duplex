@@ -39,12 +39,11 @@ ELSE ()
     MESSAGE(STATUS "Could not find openh264")
 ENDIF()
 
-set(LIBS
-        opencv_core opencv_highgui opencv_imgproc opencv_videoio  # OpenCV related libs
+set(LIBS opencv_core opencv_highgui opencv_imgproc opencv_videoio  # OpenCV related libs
         x264 swscale avformat avcodec avutil swresample  # x264 and ffmpeg libs
-        dl m z pthread va  # libs required for ffmpeg
+        dl m z pthread  # libs required for ffmpeg
         )
 
-add_executable(openh264_example main.cpp)
+add_executable(openh264_example main.cpp Encoder.h Decoder.h)
 
 target_link_libraries(openh264_example ${OPENCV_LIBS} ${OPENH264_LIBRARy} ${LIBS})
