@@ -6,10 +6,12 @@
 #define OPENH264_EXAMPLE_DECODER_H
 
 #include <libavcodec/avcodec.h>
+#include <iostream>
 
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(55,28,1)
-#define av_frame_alloc  avcodec_alloc_frame
-#endif
+//#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(55,28,1)
+//#define av_frame_alloc  avcodec_alloc_frame
+//#endif
+
 
 class Decoder {
 public:
@@ -17,7 +19,8 @@ public:
         matReady = false;
 
         avcodec_register_all();
-        av_init_packet(&avpkt);
+        //av_init_packet(&avpkt);
+        av_packet_alloc(&avpkt);
 
         codec = avcodec_find_decoder(AV_CODEC_ID_H264);
         if (!codec) {
@@ -30,7 +33,7 @@ public:
             exit(1);
         }
 
-        if (avcodec_open2(c, codec, NULL) < 0) {
+        if (avcodec_open2(c, codec, nullptr) < 0) {
             fprintf(stderr, "Could not open codec\n");
             exit(1);
         }
@@ -91,6 +94,7 @@ public:
                       frame->linesize, 0, c->height, pFrameBGR->data, pFrameBGR->linesize);
 
             memcpy(pCvMat.data, out_buffer, BGRsize);
+            std::cout << "decoding frame " << frame_count << std::cout;
 
 //        printf("decoding frame: %d\n",frame_count);
             frame_count++;
@@ -102,9 +106,6 @@ public:
             avpkt.size -= len;
             avpkt.data += len;
         }
-
-
-
 
     }
 

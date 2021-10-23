@@ -6,7 +6,7 @@
 #define OPENH264_EXAMPLE_ENCODER_H
 
 
-#include <stdint.h>
+#include <cstdint>
 
 extern "C" {
 #include <x264.h>
