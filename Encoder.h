@@ -19,6 +19,8 @@ extern "C" {
 
 
 class Encoder {
+    x264_nal_t* nals;
+    int num_nals;
 public:
 
     Encoder(int inW, int inH, int outW, int outH, float fps):
@@ -61,7 +63,7 @@ public:
     }
 
 
-    int Encoder::encode(unsigned char * img, bool *imgReady) {
+    int encode(unsigned char * img, bool *imgReady) {
 
         // Put raw image data to AV picture
         int bytes_filled = av_image_fill_arrays(pic_raw.data,pic_raw.linesize, img, cam_pixel_fmt, in_xres, in_yres,1);
@@ -91,13 +93,13 @@ public:
 private:
     int in_xres, in_yres, out_xres, out_yres;
     int framecounter;
-    int nheader;
+    int nheader{};
     x264_t* enc;
-    x264_param_t prms;
-    x264_picture_t pic_in, pic_out;
+    x264_param_t prms{};
+    x264_picture_t pic_in{}, pic_out{};
 
     struct SwsContext* sws;
-    AVFrame pic_raw;     /* used for our "raw" input container */
+    AVFrame pic_raw{};     /* used for our "raw" input container */
     AVPixelFormat cam_pixel_fmt = AV_PIX_FMT_BGR24;
 
 };
