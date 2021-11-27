@@ -7,6 +7,7 @@
 
 
 #include <cstdint>
+#include <queue>
 
 extern "C" {
 #include <x264.h>
@@ -19,16 +20,16 @@ extern "C" {
 
 
 class Encoder {
-    x264_nal_t* nals;
-    int num_nals;
 public:
+    x264_nal_t* nals{};
+    int num_nals{};
+    unsigned char* image_buff;
 
     Encoder(int inW, int inH, int outW, int outH, float fps):
             in_xres(inW),
             in_yres(inH),
             out_xres(outW),
-            out_yres(outH) {
-
+            out_yres(outH){
 
         framecounter = 0;
         x264_param_default_preset(&prms, "ultrafast", "zerolatency,fastdecode");
@@ -42,6 +43,8 @@ public:
         prms.rc.i_rc_method = X264_RC_CRF;
         prms.rc.f_rf_constant = 20;
         prms.rc.f_rf_constant_max = 25;
+        prms.b_repeat_headers = 1;
+        prms.b_annexb = 1;
 
         prms.i_csp = X264_CSP_I420;
         enc = x264_encoder_open(&prms);
@@ -63,13 +66,13 @@ public:
     }
 
 
-    int encode(unsigned char * img, bool *imgReady) {
+    int encode(unsigned char* img, bool *imgReady) {
 
         // Put raw image data to AV picture
         int bytes_filled = av_image_fill_arrays(pic_raw.data,pic_raw.linesize, img, cam_pixel_fmt, in_xres, in_yres,1);
         if(!bytes_filled) {
             std::cout << "Cannot fill the raw input buffer" << std::endl;
-            return -1;
+            return 0;
         }
 
         // convert to I420 for x264
@@ -77,7 +80,7 @@ public:
                           in_yres, pic_in.img.plane, pic_in.img.i_stride);
         if(h != out_yres) {
             std::cout << "scale failed: %d" << std::endl;
-            return -1;
+            return 0;
         }
 
         // Set imgReady to false here (cameraGrabber thread may now write a new image into it), since the data we process now with is already in another place
@@ -86,8 +89,20 @@ public:
         // Encode
         pic_in.i_pts = framecounter++;
         int frame_size = x264_encoder_encode(enc, &nals, &num_nals, &pic_in, &pic_out);
+        image_buff = new unsigned char[out_xres * out_yres * 3];
 
-        return frame_size;
+        int offset;
+        for (int i = 0; i <= num_nals; i++) {
+            std::memcpy(image_buff + offset, nals[i].p_payload, nals[i].i_payload);
+            offset += nals[i].i_payload;
+            //output_qeue.push(nals[i].p_payload);
+        }
+        return offset;
+    }
+
+    void delete_data() {
+            delete[] image_buff;
+
     }
 
 private:

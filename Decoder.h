@@ -12,121 +12,95 @@
 //#define av_frame_alloc  avcodec_alloc_frame
 //#endif
 
-#include <libswscale/swscale.h>
-#include <libavcodec/avcodec.h>
+extern "C" {
+#include<libavutil/avutil.h>
+#include<libavutil/imgutils.h>
 #include <libavformat/avformat.h>
-#include <libavformat/avio.h>
-#include <libavutil/imgutils.h>
-#include <libimagequant.h>
-
+#include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
+}
 
 class Decoder {
 public:
-    Decoder() {
+    Decoder(int& width, int& height) {
         matReady = false;
 
-        //avcodec_register_all();
-        //av_init_packet(&avpkt);
-        //av_packet_alloc(avpkt);
+        image_h = width;
+        image_w = height;
 
+        rgb_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, image_w, image_h, 1);
+
+        //rgb_size = avpicture_get_size(AV_PIX_FMT_RGB24, image_w, image_h);
         codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+        context = avcodec_alloc_context3(codec);
+        context->width = image_w;
+        context->height = image_h;
+        context->extradata = nullptr;
+        context->pix_fmt = AV_PIX_FMT_YUV420P;
+        avcodec_open2(context, codec, nullptr);
 
-        if (!codec) {
-            fprintf(stderr, "Codec not found\n");
-            exit(1);
-        }
-        c = avcodec_alloc_context3(codec);
-        if (!c) {
-            fprintf(stderr, "Could not allocate video codec context\n");
-            exit(1);
-        }
+        img_convert_ctx = sws_getContext(image_w, image_h, AV_PIX_FMT_YUV420P, image_w, image_h, AV_PIX_FMT_RGB24, SWS_FAST_BILINEAR,
+                                          nullptr, nullptr, nullptr);
 
-        if (avcodec_open2(c, codec, nullptr) < 0) {
-            fprintf(stderr, "Could not open codec\n");
-            exit(1);
-        }
+        frame = icv_alloc_picture_FFMPEG(AV_PIX_FMT_YUV420P, image_w, image_h, true);
+        pFrameBGR = icv_alloc_picture_FFMPEG(AV_PIX_FMT_RGB24, image_w, image_h, true);
 
-        frame = av_frame_alloc();
-        if (!frame) {
-            fprintf(stderr, "Could not allocate video frame\n");
-            exit(1);
-        }
-
-        frame_count = 0;
-
-        pFrameBGR = av_frame_alloc();
     }
 
-    int decode(unsigned char *inputbuf, size_t size){
+    static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bool alloc)
+    {
+        AVFrame * picture;
+        uint8_t * picture_buf;
+        int size;
 
-        avpkt.size = size;
-        if(avpkt.size == 0)
-            return 0;
-
-        avpkt.data = inputbuf;
-
-        int len, got_frame;
-
-        //int send_size = avcodec_send_frame(c, frame);
-
-        //got_frame = avcodec_receive_frame(c, frame);
-
-        //deprecated
-        //len = avcodec_decode_video2(c, frame, &got_frame, &avpkt);
-
-        got_frame = avcodec_send_packet(c, &avpkt);
-
-        if (got_frame < 0) {
-            av_log(nullptr, AV_LOG_ERROR, "Error while sending a packet to the decoder\n");
-            return 0;
+        picture = av_frame_alloc();
+        if (!picture)
+            return nullptr;
+        size = av_image_get_buffer_size((AVPixelFormat)pix_fmt, width, height, 1);
+        if(alloc)
+        {
+            picture_buf = (uint8_t *) malloc(size);
+            if (!picture_buf)
+            {
+                av_frame_free(&picture);
+                std::cout << "picture buff = NULL" << std::endl;
+                return nullptr;
+            }
+            int filled = av_image_fill_arrays(picture->data, picture->linesize, picture_buf,
+                                              (AVPixelFormat)pix_fmt, width, height, 1);
         }
-
-        len = avcodec_receive_frame(c, frame);
-
-        if (len < 0) {
-            matReady = false;
-            fprintf(stderr, "Error while decoding frame %d\n", frame_count);
-            frame_count++;
-
-            return 0;
-        }
-        if(out_buffer == nullptr) {
-            //BGRsize = avpicture_get_size(AV_PIX_FMT_BGR24, c->width,
-            //                             c->height);
+        return picture;
+    }
 
 
-            BGRsize = av_image_get_buffer_size(AV_PIX_FMT_BGR24, c->width, c->height, 1);
-            out_buffer = (uint8_t *) av_malloc(BGRsize);
-            //avpicture_fill((AVPicture *) pFrameBGR, out_buffer, AV_PIX_FMT_BGR24,
-            //               c->width, c->height);
+    int decode(unsigned char *inputbuf, int& size) {
 
-            av_image_fill_arrays(pFrameBGR->data,pFrameBGR->linesize, out_buffer, AV_PIX_FMT_BGR24, c->width, c->height, 1);
+        AVPacket av_packet;
+        int ret = av_new_packet(&av_packet, size);
+        av_packet.data = inputbuf;
+        av_packet.size = size;
 
-            img_convert_ctx =
-                    sws_getContext(c->width, c->height, c->pix_fmt,
-                                   c->width, c->height, AV_PIX_FMT_BGR24, SWS_BICUBIC, nullptr, nullptr,
-                                   nullptr);
-            pCvMat.create(cv::Size(c->width, c->height), CV_8UC3);
+        int frame_finished = 0;
+        int len = 0;
+        int gotframe = 0;
 
-        }
-        if (got_frame) {
-            matReady = true;
-            sws_scale(img_convert_ctx, (const uint8_t *const *)frame->data,
-                      frame->linesize, 0, c->height, pFrameBGR->data, pFrameBGR->linesize);
+        gotframe = avcodec_send_packet(context, &av_packet);
 
-            memcpy(pCvMat.data, out_buffer, BGRsize);
-            std::cout << "decoding frame " << frame_count << std::endl;
+        //int av_return = avcodec_decode_video2(context, frame, &frame_finished, &av_packet );
 
-//        printf("decoding frame: %d\n",frame_count);
-            frame_count++;
-        }
-        else{
-            matReady = false;
-        }
-        if (avpkt.data) {
-            avpkt.size -= len;
-            avpkt.data += len;
-        }
+        len = avcodec_receive_frame(context, frame);
+
+        if(len != 0)
+            return false;
+        //Convert the frame from YUV420 to RGB24
+        sws_scale(img_convert_ctx, frame->data, frame->linesize, 0, image_h, pFrameBGR->data, pFrameBGR->linesize);
+        //Manadatory function to copy the image form an AVFrame to a generic buffer.
+        //avpicture_layout(( *)av_frame_RGB_, PIX_FMT_RGB24, image_w_, image_h_, (unsigned char *)rgb_buffer, rgb_size_);
+        pCvMat = cv::Mat(image_w, image_h, CV_8UC4);
+        int success = av_image_copy_to_buffer(pCvMat.data, rgb_size, frame->data, (const int*)frame->linesize,
+                                              (AVPixelFormat)frame->format, frame->width, frame->height, 1);
+
+        std::cout << "Success " << success << std::endl;
 
         return 1;
 
@@ -139,17 +113,17 @@ public:
 
 
 private:
-    const AVCodec *codec;
-    AVCodecContext *c = nullptr;
-    int frame_count;
+    const AVCodec *codec = nullptr;
+    AVCodecContext *context = nullptr;
+    int frame_count{};
     AVFrame *frame;
-    AVPacket avpkt;
     AVFrame *pFrameBGR;
+    int image_w, image_h;
 
-    int BGRsize;
+    int rgb_size{};
     uint8_t *out_buffer = nullptr;
 
-    struct SwsContext *img_convert_ctx;
+    struct SwsContext *img_convert_ctx{};
     cv::Mat pCvMat;
     bool matReady;
 
