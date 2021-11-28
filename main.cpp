@@ -2,17 +2,6 @@
 #include "Encoder.h"
 #include "Decoder.h"
 
-class Display {
-public:
-    Display() {
-        cv::namedWindow("Display Window");
-    }
-
-    void display_frame(const cv::Mat& display_frame) {
-        imshow("Display window", display_frame);
-    }
-};
-
 int main() {
     cv::Mat image;
     int width = 1280;
