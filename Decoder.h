@@ -100,18 +100,17 @@ public:
             return false;
         //Convert the frame from YUV420 to RGB24
         sws_scale(img_convert_ctx, frame->data, frame->linesize, 0, image_h, pFrameBGR->data, pFrameBGR->linesize);
-        //Manadatory function to copy the image form an AVFrame to a generic buffer.
-        //avpicture_layout(( *)av_frame_RGB_, PIX_FMT_RGB24, image_w_, image_h_, (unsigned char *)rgb_buffer, rgb_size_);
-        //pCvMat = cv::Mat(cv::Size(image_w, image_h), CV_8UC4, frame->data, frame->linesize[0]);
+
         pCvMat.create(cv::Size(image_w, image_h), CV_8UC3);
-        //av_image_fill_array(out_buffer, pFrameBGR->data, pFrameBGR->linesize, AV_PIX_FMT_RGB24,
-        //                     context->width, context->height);
+
         int success = av_image_copy_to_buffer(pCvMat.data, rgb_size, pFrameBGR->data, pFrameBGR->linesize,
                                               AV_PIX_FMT_RGB24, context->width, context->height, 1);
 
-        std::cout << "Success " << success << std::endl;
+        if (!success) {
+            return 0;
+        }
 
-        return 1;
+        return success;
 
     }
 
