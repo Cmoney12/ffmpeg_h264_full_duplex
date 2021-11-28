@@ -37,6 +37,11 @@ public:
         prms.i_fps_num = (int)fps;
         prms.i_fps_den = 1;
         prms.rc.i_qp_constant = 20;
+        //added
+        prms.i_sps_id = 7;
+        // the following two value you should keep 1
+        prms.b_repeat_headers = 1;    // to get header before every I-Frame
+        prms.b_annexb = 1;
 
         prms.rc.i_rc_method = X264_RC_CRF;
         prms.rc.f_rf_constant = 20;
@@ -89,7 +94,7 @@ public:
         image_buff = new unsigned char[out_xres * out_yres * 3];
 
         int offset;
-        for (int i = 0; i <= num_nals; i++) {
+        for (int i = 0; i < num_nals; i++) {
             std::memcpy(image_buff + offset, nals[i].p_payload, nals[i].i_payload);
             offset += nals[i].i_payload;
         }
@@ -110,7 +115,8 @@ private:
 
     struct SwsContext* sws;
     AVFrame pic_raw{};     /* used for our "raw" input container */
-    AVPixelFormat cam_pixel_fmt = AV_PIX_FMT_BGR24;
+    //AVPixelFormat cam_pixel_fmt = AV_PIX_FMT_BGR24;
+    AVPixelFormat cam_pixel_fmt = AV_PIX_FMT_RGB24;
 
 };
 

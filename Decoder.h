@@ -84,7 +84,13 @@ public:
         int len = 0;
         int gotframe = 0;
 
-        gotframe = avcodec_send_packet(context, &av_packet);
+
+        ret = avcodec_send_packet(context, &av_packet);
+
+        if (ret < 0) {
+            fprintf(stderr, "Error sending a packet for decoding\n");
+            exit(1);
+        }
 
         //int av_return = avcodec_decode_video2(context, frame, &frame_finished, &av_packet );
 
@@ -97,7 +103,7 @@ public:
         //Manadatory function to copy the image form an AVFrame to a generic buffer.
         //avpicture_layout(( *)av_frame_RGB_, PIX_FMT_RGB24, image_w_, image_h_, (unsigned char *)rgb_buffer, rgb_size_);
         //pCvMat = cv::Mat(cv::Size(image_w, image_h), CV_8UC4, frame->data, frame->linesize[0]);
-        pCvMat.create(cv::Size(image_w, image_h), CV_8UC4);
+        pCvMat.create(cv::Size(image_w, image_h), CV_8UC3);
         //av_image_fill_array(out_buffer, pFrameBGR->data, pFrameBGR->linesize, AV_PIX_FMT_RGB24,
         //                     context->width, context->height);
         int success = av_image_copy_to_buffer(pCvMat.data, rgb_size, pFrameBGR->data, pFrameBGR->linesize,
