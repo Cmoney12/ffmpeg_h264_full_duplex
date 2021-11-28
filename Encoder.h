@@ -23,28 +23,24 @@ class Encoder {
 public:
     x264_nal_t* nals{};
     int num_nals{};
-    unsigned char* image_buff;
+    unsigned char* image_buff{};
 
     Encoder(int inW, int inH, int outW, int outH, float fps):
             in_xres(inW),
             in_yres(inH),
             out_xres(outW),
             out_yres(outH){
-
-        framecounter = 0;
         x264_param_default_preset(&prms, "ultrafast", "zerolatency,fastdecode");
         x264_param_apply_profile(&prms, "baseline");
         prms.i_width = out_xres;
         prms.i_height = out_yres;
-        prms.i_fps_num = fps;
+        prms.i_fps_num = (int)fps;
         prms.i_fps_den = 1;
         prms.rc.i_qp_constant = 20;
 
         prms.rc.i_rc_method = X264_RC_CRF;
         prms.rc.f_rf_constant = 20;
         prms.rc.f_rf_constant_max = 25;
-        prms.b_repeat_headers = 1;
-        prms.b_annexb = 1;
 
         prms.i_csp = X264_CSP_I420;
         enc = x264_encoder_open(&prms);
@@ -95,21 +91,19 @@ public:
         for (int i = 0; i <= num_nals; i++) {
             std::memcpy(image_buff + offset, nals[i].p_payload, nals[i].i_payload);
             offset += nals[i].i_payload;
-            //output_qeue.push(nals[i].p_payload);
         }
         return offset;
     }
 
-    void delete_data() {
-            delete[] image_buff;
-
+    void delete_data() const {
+        delete[] image_buff;
     }
 
 private:
     int in_xres, in_yres, out_xres, out_yres;
-    int framecounter;
-    int nheader{};
+    int framecounter{};
     x264_t* enc;
+    int nheader{};
     x264_param_t prms{};
     x264_picture_t pic_in{}, pic_out{};
 

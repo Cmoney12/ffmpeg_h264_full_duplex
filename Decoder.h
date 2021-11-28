@@ -28,7 +28,7 @@ public:
         image_h = width;
         image_w = height;
 
-        rgb_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, image_w, image_h, 1);
+        rgb_size = av_image_get_buffer_size(AV_PIX_FMT_BGR24, image_w, image_h, 1);
 
         //rgb_size = avpicture_get_size(AV_PIX_FMT_RGB24, image_w, image_h);
         codec = avcodec_find_decoder(AV_CODEC_ID_H264);
@@ -44,7 +44,6 @@ public:
 
         frame = icv_alloc_picture_FFMPEG(AV_PIX_FMT_YUV420P, image_w, image_h, true);
         pFrameBGR = icv_alloc_picture_FFMPEG(AV_PIX_FMT_RGB24, image_w, image_h, true);
-
     }
 
     static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bool alloc)
@@ -96,8 +95,10 @@ public:
         sws_scale(img_convert_ctx, frame->data, frame->linesize, 0, image_h, pFrameBGR->data, pFrameBGR->linesize);
         //Manadatory function to copy the image form an AVFrame to a generic buffer.
         //avpicture_layout(( *)av_frame_RGB_, PIX_FMT_RGB24, image_w_, image_h_, (unsigned char *)rgb_buffer, rgb_size_);
-        pCvMat = cv::Mat(image_w, image_h, CV_8UC4);
-        int success = av_image_copy_to_buffer(pCvMat.data, rgb_size, frame->data, (const int*)frame->linesize,
+        //pCvMat = cv::Mat(cv::Size(image_w, image_h), CV_8UC4, frame->data, frame->linesize[0]);
+        pCvMat.create(cv::Size(image_w, image_h), CV_8UC4);
+        //av_image_copy(pCvMat.data, frame->linesize, frame->data, frame->linesize, (AVPixelFormat)frame->format, frame->width, frame->height);
+        int success = av_image_copy_to_buffer(pCvMat.data, rgb_size, frame->data, frame->linesize,
                                               (AVPixelFormat)frame->format, frame->width, frame->height, 1);
 
         std::cout << "Success " << success << std::endl;

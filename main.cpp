@@ -38,8 +38,6 @@ int main() {
     while (true) {
         cap >> image;
         unsigned char *frame = image.data;
-        unsigned char *enc_img;
-        //unsigned char imin_heightage_[in_width * in_height * 3];
 
         int encoded_size = encoder->encode(frame, &image_ready);
         int display_size = decoder->decode(encoder->image_buff, encoded_size);
@@ -48,12 +46,9 @@ int main() {
 
         if (!display_frame.empty()) {
             cv::Mat display_frame = decoder->getMat();
-            //cv::Mat display_frame = cv::Mat(in_height, in_width, CV_8UC1, frame);
             imshow("Display window", display_frame);
             cv::waitKey(1);
         }
     }
-
-    // may need libav
     return 0;
 }
