@@ -65,7 +65,8 @@ public:
     int encode(unsigned char* img, bool *imgReady) {
 
         // Put raw image data to AV picture
-        int bytes_filled = av_image_fill_arrays(pic_raw.data,pic_raw.linesize, img, cam_pixel_fmt, in_xres, in_yres,1);
+        int bytes_filled = av_image_fill_arrays(pic_raw.data,pic_raw.linesize, img,
+                                                cam_pixel_fmt, in_xres, in_yres,1);
         if(!bytes_filled) {
             std::cout << "Cannot fill the raw input buffer" << std::endl;
             return 0;
