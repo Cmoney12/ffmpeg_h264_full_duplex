@@ -25,10 +25,10 @@ public:
     Decoder(int& width, int& height) {
         matReady = false;
 
-        image_h = width;
-        image_w = height;
+        image_h = height;
+        image_w = width;
 
-        rgb_size = av_image_get_buffer_size(AV_PIX_FMT_BGR24, image_w, image_h, 1);
+        rgb_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, image_w, image_h, 1);
 
         //rgb_size = avpicture_get_size(AV_PIX_FMT_RGB24, image_w, image_h);
         codec = avcodec_find_decoder(AV_CODEC_ID_H264);
@@ -39,8 +39,9 @@ public:
         context->pix_fmt = AV_PIX_FMT_YUV420P;
         avcodec_open2(context, codec, nullptr);
 
-        img_convert_ctx = sws_getContext(image_w, image_h, AV_PIX_FMT_YUV420P, image_w, image_h, AV_PIX_FMT_RGB24, SWS_FAST_BILINEAR,
-                                          nullptr, nullptr, nullptr);
+        img_convert_ctx = sws_getContext(image_w, image_h, AV_PIX_FMT_YUV420P, image_w, image_h,
+                                         AV_PIX_FMT_RGB24, SWS_FAST_BILINEAR,nullptr,
+                                         nullptr, nullptr);
 
         frame = icv_alloc_picture_FFMPEG(AV_PIX_FMT_YUV420P, image_w, image_h, true);
         pFrameBGR = icv_alloc_picture_FFMPEG(AV_PIX_FMT_RGB24, image_w, image_h, true);
@@ -97,9 +98,10 @@ public:
         //avpicture_layout(( *)av_frame_RGB_, PIX_FMT_RGB24, image_w_, image_h_, (unsigned char *)rgb_buffer, rgb_size_);
         //pCvMat = cv::Mat(cv::Size(image_w, image_h), CV_8UC4, frame->data, frame->linesize[0]);
         pCvMat.create(cv::Size(image_w, image_h), CV_8UC4);
-        //av_image_copy(pCvMat.data, frame->linesize, frame->data, frame->linesize, (AVPixelFormat)frame->format, frame->width, frame->height);
-        int success = av_image_copy_to_buffer(pCvMat.data, rgb_size, frame->data, frame->linesize,
-                                              (AVPixelFormat)frame->format, frame->width, frame->height, 1);
+        //av_image_fill_array(out_buffer, pFrameBGR->data, pFrameBGR->linesize, AV_PIX_FMT_RGB24,
+        //                     context->width, context->height);
+        int success = av_image_copy_to_buffer(pCvMat.data, rgb_size, pFrameBGR->data, pFrameBGR->linesize,
+                                              AV_PIX_FMT_RGB24, context->width, context->height, 1);
 
         std::cout << "Success " << success << std::endl;
 
@@ -120,7 +122,7 @@ private:
     AVFrame *frame;
     AVFrame *pFrameBGR;
     int image_w, image_h;
-
+    int align = 32;
     int rgb_size{};
     uint8_t *out_buffer = nullptr;
 
