@@ -4,14 +4,14 @@
 
 int main() {
     cv::Mat image;
-    int width = 1280;
+    int width = 800;
     int height = 720;
-    float fps = 30;
+    int fps = 30;
     cv::namedWindow("Display window");
     cv::VideoCapture cap(0);
     cap.set(cv::CAP_PROP_FRAME_WIDTH, width);
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, height);
-    cap.set(cv::CAP_PROP_FPS, (int)fps);
+    cap.set(cv::CAP_PROP_FPS, fps);
     cap.open(0);
     //int in_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
     //int in_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);

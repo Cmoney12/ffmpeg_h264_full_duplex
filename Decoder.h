@@ -23,14 +23,12 @@ extern "C" {
 class Decoder {
 public:
     Decoder(int& width, int& height) {
-        matReady = false;
 
         image_h = height;
         image_w = width;
 
         rgb_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, image_w, image_h, 1);
 
-        //rgb_size = avpicture_get_size(AV_PIX_FMT_RGB24, image_w, image_h);
         codec = avcodec_find_decoder(AV_CODEC_ID_H264);
         context = avcodec_alloc_context3(codec);
         context->width = image_w;
@@ -80,10 +78,6 @@ public:
         av_packet.data = inputbuf;
         av_packet.size = size;
 
-        int frame_finished = 0;
-        int len = 0;
-        int gotframe = 0;
-
 
         ret = avcodec_send_packet(context, &av_packet);
 
@@ -92,12 +86,11 @@ public:
             exit(1);
         }
 
-        //int av_return = avcodec_decode_video2(context, frame, &frame_finished, &av_packet );
+        ret = avcodec_receive_frame(context, frame);
 
-        len = avcodec_receive_frame(context, frame);
-
-        if(len != 0)
+        if(ret != 0)
             return false;
+
         //Convert the frame from YUV420 to RGB24
         sws_scale(img_convert_ctx, frame->data, frame->linesize, 0, image_h, pFrameBGR->data, pFrameBGR->linesize);
 
@@ -110,6 +103,8 @@ public:
             return 0;
         }
 
+        //av_free(&av_packet);
+
         return success;
 
     }
@@ -119,7 +114,6 @@ public:
     }
 
 
-
 private:
     const AVCodec *codec = nullptr;
     AVCodecContext *context = nullptr;
@@ -127,13 +121,10 @@ private:
     AVFrame *frame;
     AVFrame *pFrameBGR;
     int image_w, image_h;
-    int align = 32;
     int rgb_size{};
-    uint8_t *out_buffer = nullptr;
 
     struct SwsContext *img_convert_ctx{};
     cv::Mat pCvMat;
-    bool matReady;
 
 };
 

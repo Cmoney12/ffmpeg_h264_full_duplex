@@ -25,7 +25,7 @@ public:
     int num_nals{};
     unsigned char* image_buff{};
 
-    Encoder(int inW, int inH, int outW, int outH, float fps):
+    Encoder(int& inW, int& inH, int& outW, int& outH, int& fps):
             in_xres(inW),
             in_yres(inH),
             out_xres(outW),
@@ -91,7 +91,8 @@ public:
         // Encode
         pic_in.i_pts = framecounter++;
         int frame_size = x264_encoder_encode(enc, &nals, &num_nals, &pic_in, &pic_out);
-        image_buff = new unsigned char[out_xres * out_yres * 3];
+        //image_buff = new unsigned char[out_xres * out_yres * 3];
+        image_buff = new unsigned char[frame_size];
 
         int offset;
         for (int i = 0; i < num_nals; i++) {
